@@ -1,0 +1,67 @@
+# This is a very simple reusable action to demonstrate using a github composite
+# action to run a terraform CI/CD pipeline from a downstream repo
+name: "Terraform CI/CD Central Action"
+description: "Demo Composite Action Example, Terraform CI/CD Deploy to Dev"
+
+inputs:
+  aws_access_key:
+    description: "AWS_ACCESS_KEY for the account to deploy to"
+    required: true
+  aws_secret_key:
+    description: "AWS_SECRET_KEY for the account to deploy to"
+    required: true
+  aws_iam_role:
+    description: "AWS IAM role to assume for the deployment"
+    required: true
+  aws_session_name:
+    description: "AWS session name"
+    required: true
+    default: tf-dev-cicd-role-session
+
+runs:
+  using: "composite"
+  steps:
+
+    # checkout the repo (shallow)
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+
+    # setup AWS credentials based on secrets in the downstream
+    # repo that will be provided as inputs defined above.
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: us-east-2
+        aws-access-key-id: ${{ inputs.aws_access_key}}
+        aws-secret-access-key: ${{ inputs.aws_secret_key }}
+        role-to-assume: ${{ inputs.aws_iam_role }}
+        role-duration-seconds: 1200
+        role-session-name: ${{ inputs.aws_session_name }}
+        role-skip-session-tagging: true
+
+    # Setup terraform using the hashicorp action. This just install terraform
+    # into the temporary working space.
+    - name: TF Setup (dev)
+      uses: hashicorp/setup-terraform@v3
+
+    # Initialize terraform modules, etc. Note that it is using the AWS credentials stored in the github
+    # secrets.
+    - name: TF Init (dev)
+      run: terraform init
+      shell: bash
+
+    # Validate the TF HCL syntax
+    - name: TF Validate (dev)
+      run: terraform validate
+      shell: bash
+
+    # TF plan. Note that it is using the AWS credentials stored in the github
+    # secrets.
+    - name: TF Plan (dev)
+      run: terraform plan
+      shell: bash
+
+    # Finally, apply the terraform to dev.
+    - name: TF Apply  (dev)
+      run: terraform apply -auto-approve
+      shell: bash

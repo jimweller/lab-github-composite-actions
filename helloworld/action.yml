@@ -1,0 +1,27 @@
+name: "Hello World Central Action"
+description: "Simple Composite Action Example, Hello World"
+
+inputs:
+  hello_input:
+    description: "Message you want to display"
+    required: true
+    default: "Hello world!"
+
+outputs:
+  random-number:
+    description: "Random number"
+    value: ${{ steps.random-number-generator.outputs.random-number }}
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: "Display Message"
+      id: display-message
+      run: echo ${{ inputs.hello_input }}
+      shell: bash
+
+    - name: Random Number Generator
+      id: random-number-generator
+      run: echo "random-number=$(echo $RANDOM)" >> $GITHUB_OUTPUT
+      shell: bash
